@@ -1,0 +1,40 @@
+#!/bin/bash
+
+function usage
+{
+    cat <<CUT
+Usage: ${0##*/} [OPTION]...
+Gather USB HID graphics tablet information and diagnostics.
+
+General options
+
+    -h, --help          This help message.
+
+Tablet device (any single option will suffice)
+
+    -f, --file=DEVICE   Event device file name.
+    -i, --id=VENDOR:PRODUCT
+                        USB vendor and product IDs in hex, separated by a
+                        colon (as shown by lsusb, for example).
+    -n, --name=PATTERN  Device name shell pattern. For example "*Tablet*"
+
+    If no tablet device option is specified, --name='*Tablet*' is assumed.
+
+Output (if not specified, standard output is used)
+    
+    -o, --output=FILE   Output file.
+
+CUT
+}
+
+# Parse command line parameters
+usage
+exit 1
+
+# Lookup device in the sysfs tree
+# Retrieve device path in the udev tree.
+# Retrieve device vendor and product ID's
+
+# Retrieve device report descriptor
+# Ask user to make four strokes on the tablet edges
+# Capture evdev dump
