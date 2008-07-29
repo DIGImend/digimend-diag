@@ -51,22 +51,42 @@ END
 }
 
 
+function pause
+{
+    local title="$1"
+    local message="$2"
+
+    cat 1>&2 <<END
+$title
+
+$message
+
+Press Enter when done.
+END
+    read -s
+    echo 1>&2
+}
+
+
 function confirm
 {
     local question="$1"
     local yesno
 
     while true; do
-        read -p "$question? [Y/n]:" yesno
+        read -p "$question? [Y/n]: " yesno
         if [ -z "$yesno" ]; then
+            echo 1>&2
             return 0;
         fi
 
         case "$yesno" in
             y|yes)
+                echo 1>&2
                 return 0;
                 ;;
             n|no)
+                echo 1>&2
                 return 1;
         esac
     done
@@ -139,12 +159,26 @@ function digimend-evdev-dump
 }
 
 
-function report_dump
+function dump_report
 {
     local usb_id="$1"
 
-    echo "HID report descriptor:"
+    echo "HID REPORT DESCRIPTOR"
     digimend-report-dump ${usb_id%:*} ${usb_id#*:}
+    echo
+}
+
+
+function dump_capabilities
+{
+    local path="$1"
+
+    echo "CAPABILITIES"
+
+    for c in "$path"/capabilities/*; do
+        echo ${c##*/}:$'\t'`< "$c"`
+    done
+
     echo
 }
 
@@ -152,13 +186,20 @@ function report_dump
 function capture_input
 {
     local title="$1"
-    local device="$2"
+    local message="$2"
+    local device="$3"
 
-    echo "Press Enter to start the capture," \
-         "press Enter once again when finished." 1>&2
+    cat 1>&2 <<END
+$title
+
+$message
+
+Press Enter to start the capture, press Enter once again when finished.
+END
+
     read -s
     echo "Capturing..." 1>&2
-    echo "$title:"
+    echo "$title"
     digimend-evdev-dump $device &
     read -s
     kill $! 2>/dev/null
@@ -176,23 +217,16 @@ function capture_pen_input
     #
     # Ask for wakeup
     #
-    cat 1>&2 <<END
-PEN WAKEUP
+    pause "PEN WAKEUP" "\
+Please touch the drawing surface with the pen briefly.
 
-To ensure that the tablet pen is not in the sleep mode and will report the
-events immediately, please touch the drawing surface with the pen briefly.
-
-Press Enter when done.
-END
-    read -s
-    echo 1>&2
+This is required to ensure that the pen is not in the sleep mode and will
+report the events immediately."
 
     #
     # Capture edge strokes
     #
-    cat 1>&2 <<END
-PEN EDGE STROKES
-
+    capture_input "PEN EDGE STROKES" "\
 Please make four strokes with the tablet pen.
 
 Each stroke should be made over the edge of the drawing area, outwards,
@@ -210,18 +244,14 @@ below:
     |   '---------+---------'   |
      \           \|/           / 
       '-----------------------'
+" "$device"
 
-END
-    capture_input "PEN EDGE STROKES" "$device"
 
     #
     # Capture button clicks
     #
-    cat 1>&2 <<END
-PEN BUTTON CLICKS
-
-Please click every tablet pen button one after another, starting from the
-tip.
+    capture_input "PEN BUTTON CLICKS" "\
+Please click every pen button one after another, starting from the tip.
 
 To ensure that all the buttons are correctly detected, click the buttons,
 while holding the pen tip upon the drawing surface, as in the illustration
@@ -233,12 +263,9 @@ below:
      1 |   |   |) <----             3. Click the second button.
        |   |   |                    ...
       \|/   \ /
-       '     v
-    --------------------
+    _________V__________
     / / / / / / / / / / 
-
-END
-    capture_input "PEN BUTTON CLICKS" "$device"
+" "$device"
 }
 
 
@@ -249,37 +276,61 @@ function capture_mouse_input
     #
     # Ask for wakeup
     #
-    cat 1>&2 <<END
-MOUSE WAKEUP
+    pause "MOUSE WAKEUP" "\
+Please place the mouse on the drawing surface and click the left button.
 
-To ensure that the tablet mouse is not in the sleep mode and will report the
-events immediately, please place it on the drawing surface and click the
-left button.
+This is required to ensure that the mouse is not in the sleep mode and will
+report the events immediately."
 
-Press Enter when done.
-END
-    read -s
-    echo 1>&2
-
-    cat 1>&2 <<END
-MOUSE MOVEMENT
-
+    #
+    # Capture movement
+    #
+    capture_input "MOUSE MOVEMENT" "\
 Please move the mouse in a circle.
 
 Place the mouse near the top edge of the drawing area, and move it around
 the whole area, clockwise, and back to the original position, as in the
 illustration below:
 
-   .--------------.
-   | .----------. |
-   | |  .('').  | |
-   | |  |    |  | |
-   | |  '-<--'  | |
-   | '----------' |
-    \____________/
+    .---------------------------.
+    |                           |
+    |   .-------------------.   |
+    |   |    .-> (~) ->.    |   |
+    |   |   /           \   |   |
+    |   |  ^             v  |   |
+    |   |   \           /   |   |
+    |   |    '<------<-'    |   |
+    |   '-------------------'   |
+     \                         / 
+      '-----------------------'
+" "$device"
 
-END
-    capture_input "MOUSE MOVEMENT" "$device"
+
+    #
+    # Capture clicks
+    #
+    capture_input "MOUSE BUTTON CLICKS" "\
+Please click every mouse button one after the other.
+
+Place the mouse upon the drawing area and click the buttons in the following
+order:
+
+Left, right, middle, any other buttons.
+" "$device"
+
+    #
+    # Capture wheel
+    #
+    capture_input "MOUSE WHEEL ROTATION" "\
+Rotate the mouse wheel in both directions.
+
+Place the mouse upon the drawing area and rotate the mouse wheel, first
+moving the finger inside the mouse, then outside.
+
+If you have more than one wheel on your mouse, rotate the primary wheel
+first and then any other wheels. If you have any horizontal wheels, rotate
+them to the left first and then to the right.
+" "$device"
 }
 
 
@@ -366,22 +417,41 @@ DEVICE_EVENT_PATH="/dev/input/${DEVICE_EVENT_PATH##*/}"
 
 
 #
+# Describe what has been found
+#
+cat 1>&2 <<END
+TABLET FOUND
+
+Name:           $DEVICE_NAME
+USB ID:         $DEVICE_USB_ID
+Sysfs path:     $DEVICE_PATH
+Event device:   $DEVICE_EVENT_PATH
+
+END
+
+
+#
 # Start capturing output
 #
 (
-    #
-    # Report device ID and parameters
-    #
-    echo "Name:         $DEVICE_NAME"
-    echo "USB ID:       $DEVICE_USB_ID"
-    echo "Sysfs path:   $DEVICE_PATH"
-    echo "Event device: $DEVICE_EVENT_PATH"
+    # Report system parameters
+    echo "SYSTEM"
+    echo "Kernel:       `uname -r`"
     echo
 
-    report_dump "$DEVICE_USB_ID"
+    # Report device ID and parameters
+    echo "IDENTIFICATION"
+    echo "Name:         $DEVICE_NAME"
+    echo "USB ID:       $DEVICE_USB_ID"
+    echo
+
+    dump_capabilities "$DEVICE_PATH"
+    dump_report "$DEVICE_USB_ID"
     capture_pen_input "$DEVICE_EVENT_PATH"
     if confirm "Does the tablet have a mouse"; then
         capture_mouse_input "$DEVICE_EVENT_PATH"
     fi
 
 ) > $OUTPUT
+
+
