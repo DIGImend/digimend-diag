@@ -1,8 +1,31 @@
 #!/bin/bash
 
+# Copyright (c) 2005-2008 Nikolai Kondrashov
+#
+# This file is part of digimend-diag.
+#
+# Digimend-diag is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# Digimend-diag is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with digimend-diag; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+DEFAULT_DEVICE_NAME_PTRN="*Tablet*"
+
+# We need case insensitive matching
+shopt -s nocasematch
+
 function usage
 {
-    cat <<CUT
+    cat <<END
 Usage: ${0##*/} [OPTION]...
 Gather USB HID graphics tablet information and diagnostics.
 
@@ -12,29 +35,353 @@ General options
 
 Tablet device (any single option will suffice)
 
-    -f, --file=DEVICE   Event device file name.
     -i, --id=VENDOR:PRODUCT
                         USB vendor and product IDs in hex, separated by a
                         colon (as shown by lsusb, for example).
     -n, --name=PATTERN  Device name shell pattern. For example "*Tablet*"
 
-    If no tablet device option is specified, --name='*Tablet*' is assumed.
+All values are case insensitive. If no tablet device option is specified,
+--name='$DEFAULT_DEVICE_NAME_PTRN' is assumed.
 
 Output (if not specified, standard output is used)
     
     -o, --output=FILE   Output file.
 
-CUT
+END
 }
 
-# Parse command line parameters
-usage
-exit 1
 
+function confirm
+{
+    local question="$1"
+    local yesno
+
+    while true; do
+        read -p "$question? [Y/n]:" yesno
+        if [ -z "$yesno" ]; then
+            return 0;
+        fi
+
+        case "$yesno" in
+            y|yes)
+                return 0;
+                ;;
+            n|no)
+                return 1;
+        esac
+    done
+}
+
+
+function lookup_usb_id
+{
+    local usb_id="$1"
+
+    # For each device having an ID (bustype/vendor/product/version)
+    for d in /sys/class/input/*/id; do
+
+        # If the device is not connected via USB
+        if [ "`< $d/bustype`" != "0003" ]; then
+            continue
+        fi
+
+        # If the device vendor and product ID's doesn't match
+        if [[ "`< $d/vendor`:`< $d/product`" != "$usb_id" ]]; then
+            continue
+        fi
+
+        # We have found it
+        echo "${d%/id}"
+        return 0
+    done
+
+    # We haven't found it
+    return 1
+}
+
+
+function lookup_name_ptrn
+{
+    local name_ptrn="$1"
+
+    # For each device having an ID (bustype/vendor/product/version)
+    for d in /sys/class/input/*/id; do
+
+        # If the device is not connected via USB
+        if [ "`< $d/bustype`" != "0003" ]; then
+            continue
+        fi
+
+        # If the device name doesn't match
+        if [[ "`< ${d%/id}/name`" != $name_ptrn ]]; then
+            continue
+        fi
+
+        # We have found it
+        echo "${d%/id}"
+        return 0
+    done
+
+    # We haven't found it
+    return 1
+}
+
+
+function digimend-report-dump
+{
+    return 0
+}
+
+
+function digimend-evdev-dump
+{
+    return 0
+}
+
+
+function report_dump
+{
+    local usb_id="$1"
+
+    echo "HID report descriptor:"
+    digimend-report-dump ${usb_id%:*} ${usb_id#*:}
+    echo
+}
+
+
+function capture_input
+{
+    local title="$1"
+    local device="$2"
+
+    echo "Press Enter to start the capture," \
+         "press Enter once again when finished." 1>&2
+    read -s
+    echo "Capturing..." 1>&2
+    echo "$title:"
+    digimend-evdev-dump $device &
+    read -s
+    kill $! 2>/dev/null
+    wait $!
+    echo
+    echo "Done." 1>&2
+    echo 1>&2
+}
+
+
+function capture_pen_input
+{
+    local device="$1"
+
+    #
+    # Ask for wakeup
+    #
+    cat 1>&2 <<END
+PEN WAKEUP
+
+To ensure that the tablet pen is not in the sleep mode and will report the
+events immediately, please touch the drawing surface with the pen briefly.
+
+Press Enter when done.
+END
+    read -s
+    echo 1>&2
+
+    #
+    # Capture edge strokes
+    #
+    cat 1>&2 <<END
+PEN EDGE STROKES
+
+Please make four strokes with the tablet pen.
+
+Each stroke should be made over the edge of the drawing area, outwards,
+starting from the top edge and continuing clockwise, as in the illustration
+below:
+
+    .---------------------------.
+    |            /|\            |
+    |   .---------+---------.   |
+    |   |       1 |         |   |
+    |   |                 2 |   |
+    | <-+--               --+-> |
+    |   | 4                 |   |
+    |   |         | 3       |   |
+    |   '---------+---------'   |
+     \           \|/           / 
+      '-----------------------'
+
+END
+    capture_input "PEN EDGE STROKES" "$device"
+
+    #
+    # Capture button clicks
+    #
+    cat 1>&2 <<END
+PEN BUTTON CLICKS
+
+Please click every tablet pen button one after another, starting from the
+tip.
+
+To ensure that all the buttons are correctly detected, click the buttons,
+while holding the pen tip upon the drawing surface, as in the illustration
+below:
+
+           |   |      3             1. Press the pen upon
+           |   |) <----                the drawing surface.
+           |   |:     2             2. Click the first button.
+     1 |   |   |) <----             3. Click the second button.
+       |   |   |                    ...
+      \|/   \ /
+       '     v
+    --------------------
+    / / / / / / / / / / 
+
+END
+    capture_input "PEN BUTTON CLICKS" "$device"
+}
+
+
+function capture_mouse_input
+{
+    local device="$1"
+
+    #
+    # Ask for wakeup
+    #
+    cat 1>&2 <<END
+MOUSE WAKEUP
+
+To ensure that the tablet mouse is not in the sleep mode and will report the
+events immediately, please place it on the drawing surface and click the
+left button.
+
+Press Enter when done.
+END
+    read -s
+    echo 1>&2
+
+    cat 1>&2 <<END
+MOUSE MOVEMENT
+
+Please move the mouse in a circle.
+
+Place the mouse near the top edge of the drawing area, and move it around
+the whole area, clockwise, and back to the original position, as in the
+illustration below:
+
+   .--------------.
+   | .----------. |
+   | |  .('').  | |
+   | |  |    |  | |
+   | |  '-<--'  | |
+   | '----------' |
+    \____________/
+
+END
+    capture_input "MOUSE MOVEMENT" "$device"
+}
+
+
+DEVICE_USB_ID=""
+DEVICE_NAME_PTRN=""
+OUTPUT=""
+
+DEVICE_PATH=""
+
+#
+# Parse command line arguments
+#
+while getopts "i:n:o:h" name; do
+    case $name in
+        i)
+            DEVICE_USB_ID="$OPTARG"
+            ;;
+        n)
+            DEVICE_NAME_PTRN="$OPTARG"
+            ;;
+        o)
+            OUTPUT="$OPTARG"
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+if [ -z "$DEVICE_NAME_PTRN" ] && [ -z "$DEVICE_USB_ID" ]; then
+    DEVICE_NAME_PTRN="$DEFAULT_DEVICE_NAME_PTRN"
+fi
+
+if [ -z "$OUTPUT" ] || [ "$OUTPUT" == "-" ]; then
+    OUTPUT="/dev/stdout"
+fi
+
+#
 # Lookup device in the sysfs tree
-# Retrieve device path in the udev tree.
-# Retrieve device vendor and product ID's
+#
+if [ -n "$DEVICE_USB_ID" ]; then
+    DEVICE_USB_ID_PATH=`lookup_usb_id "$DEVICE_USB_ID"`
+fi
 
-# Retrieve device report descriptor
-# Ask user to make four strokes on the tablet edges
-# Capture evdev dump
+if [ -n "$DEVICE_NAME_PTRN" ]; then
+    DEVICE_NAME_PTRN_PATH=`lookup_name_ptrn "$DEVICE_NAME_PTRN"`
+fi
+
+if [ -n "$DEVICE_USB_ID" ] && [ -n "$DEVICE_NAME_PTRN" ] &&
+   [ "$DEVICE_USB_ID_PATH" != "$DEVICE_NAME_PTRN_PATH"]; then
+   echo "Device not found." 1>&2
+   exit 1
+fi
+
+if [ -n "$DEVICE_USB_ID_PATH" ]; then
+    DEVICE_PATH="$DEVICE_USB_ID_PATH"
+elif [ -n "$DEVICE_NAME_PTRN_PATH" ]; then
+    DEVICE_PATH="$DEVICE_NAME_PTRN_PATH"
+else
+   echo "Device not found." 1>&2
+   exit 1
+fi
+
+#
+# Fetch device parameters
+#
+if [ -z "$DEVICE_USB_ID" ]; then
+    DEVICE_USB_ID="`< $DEVICE_PATH/id/vendor`:`< $DEVICE_PATH/id/product`"
+fi
+
+DEVICE_NAME="`< $DEVICE_PATH/name`"
+
+DEVICE_EVENT_PATH=`ls -1d "$DEVICE_PATH"/event*|head -n1`
+if [ -z "$DEVICE_EVENT_PATH" ]; then
+    echo "Device has no event device file." 1>&2
+    exit 1
+fi
+DEVICE_EVENT_PATH="/dev/input/${DEVICE_EVENT_PATH##*/}"
+
+
+#
+# Start capturing output
+#
+(
+    #
+    # Report device ID and parameters
+    #
+    echo "Name:         $DEVICE_NAME"
+    echo "USB ID:       $DEVICE_USB_ID"
+    echo "Sysfs path:   $DEVICE_PATH"
+    echo "Event device: $DEVICE_EVENT_PATH"
+    echo
+
+    report_dump "$DEVICE_USB_ID"
+    capture_pen_input "$DEVICE_EVENT_PATH"
+    if confirm "Does the tablet have a mouse"; then
+        capture_mouse_input "$DEVICE_EVENT_PATH"
+    fi
+
+) > $OUTPUT
