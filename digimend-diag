@@ -181,6 +181,17 @@ function dump_capabilities
 }
 
 
+function dump_lsusb
+{
+    local usb_id="$1"
+
+    echo "LSUSB DUMP"
+    lsusb -v -d "$usb_id"
+
+    echo
+}
+
+
 function capture_input
 {
     local title="$1"
@@ -453,6 +464,7 @@ END
     echo
 
     dump_capabilities "$DEVICE_PATH"
+    dump_lsusb "$DEVICE_USB_ID"
     capture_pen_input "$DEVICE_EVENT_PATH"
     if confirm "Does the tablet have a mouse"; then
         capture_mouse_input "$DEVICE_EVENT_PATH"
