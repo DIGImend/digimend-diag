@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2005-2008 Nikolai Kondrashov
+# Copyright (c) 2008 Nikolai Kondrashov
 #
 # This file is part of digimend-diag.
 #
@@ -22,6 +22,9 @@ DEFAULT_DEVICE_NAME_PTRN="*Tablet*"
 
 # We need case insensitive matching
 shopt -s nocasematch
+
+# Stop on the first error
+set -e
 
 function usage
 {
@@ -61,7 +64,7 @@ $title
 
 $message
 
-Press Enter when done.
+Press Enter to continue.
 END
     read -s
     echo 1>&2
@@ -147,23 +150,18 @@ function lookup_name_ptrn
 }
 
 
-function digimend-report-dump
-{
-    return 0
-}
-
-
-function digimend-evdev-dump
-{
-    return 0
-}
-
-
 function dump_report
 {
     local usb_id="$1"
 
-    echo "HID REPORT DESCRIPTOR"
+    pause "HID REPORT DESCRIPTOR DUMP" "\
+The tablet will be detached from the kernel.
+
+In order to dump the tablet report descriptor, the ${0##*/} will detach the
+device from the kernel driver. To re-attach the device simply unplug and
+plug back the tablet.
+"
+    echo "HID REPORT DESCRIPTOR DUMP"
     digimend-report-dump ${usb_id%:*} ${usb_id#*:}
     echo
 }
@@ -188,6 +186,7 @@ function capture_input
     local title="$1"
     local message="$2"
     local device="$3"
+    local status="0"
 
     cat 1>&2 <<END
 $title
@@ -203,7 +202,15 @@ END
     digimend-evdev-dump $device &
     read -s
     kill $! 2>/dev/null
-    wait $!
+    # We need to capture the error code, so disable "dying" temporarily
+    set +e
+    wait $! 2>/dev/null
+    status=$?
+    set -e
+    # If it has stopped not because we've killed it
+    if (( $status != 143 )); then
+        return 1
+    fi
     echo
     echo "Done." 1>&2
     echo 1>&2
@@ -325,7 +332,7 @@ Left, right, middle, any other buttons.
 Rotate the mouse wheel in both directions.
 
 Place the mouse upon the drawing area and rotate the mouse wheel, first
-moving the finger inside the mouse, then outside.
+moving the finger outside the mouse, then inside.
 
 If you have more than one wheel on your mouse, rotate the primary wheel
 first and then any other wheels. If you have any horizontal wheels, rotate
@@ -377,11 +384,11 @@ fi
 # Lookup device in the sysfs tree
 #
 if [ -n "$DEVICE_USB_ID" ]; then
-    DEVICE_USB_ID_PATH=`lookup_usb_id "$DEVICE_USB_ID"`
+    DEVICE_USB_ID_PATH=`lookup_usb_id "$DEVICE_USB_ID" || true`
 fi
 
 if [ -n "$DEVICE_NAME_PTRN" ]; then
-    DEVICE_NAME_PTRN_PATH=`lookup_name_ptrn "$DEVICE_NAME_PTRN"`
+    DEVICE_NAME_PTRN_PATH=`lookup_name_ptrn "$DEVICE_NAME_PTRN" || true`
 fi
 
 if [ -n "$DEVICE_USB_ID" ] && [ -n "$DEVICE_NAME_PTRN" ] &&
@@ -446,12 +453,13 @@ END
     echo
 
     dump_capabilities "$DEVICE_PATH"
-    dump_report "$DEVICE_USB_ID"
     capture_pen_input "$DEVICE_EVENT_PATH"
     if confirm "Does the tablet have a mouse"; then
         capture_mouse_input "$DEVICE_EVENT_PATH"
     fi
-
+    dump_report "$DEVICE_USB_ID"
 ) > $OUTPUT
+
+echo "Finished." 1>&2
 
 
