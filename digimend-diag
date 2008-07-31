@@ -77,7 +77,7 @@ function confirm
     local yesno
 
     while true; do
-        read -p "$question? [Y/n]: " yesno
+        read -p "$question? [Y/n] " yesno
         if [ -z "$yesno" ]; then
             echo 1>&2
             return 0;

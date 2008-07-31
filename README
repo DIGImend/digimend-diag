@@ -1,0 +1,48 @@
+DIGIMEND-DIAG README
+
+Digimend-diag is a tool for gathering graphics tablet parameters and
+behavior information. It supports USB HID tablets only, currently.
+
+
+PREREQUISITES
+
+This program requires 2.6 series kernel.
+
+In order to build and run this program you will need the following packages
+installed along with their dependencies:
+
+gawk
+libhid-dev
+usbutils
+
+
+INSTALLATION
+
+A simple "make install" will do.
+
+The default prefix is /usr/local, but you could specify your own prefix like
+this:
+
+make PREFIX=/usr install
+
+
+USAGE
+
+Connect your tablet and run digimend-diag, specifying output file with the
+-o option, like this:
+
+digimend-diag -o diag.txt
+
+If digimend-diag says "Tablet not found.", run lsusb and try to locate your
+tablet in the output, then run digimend-diag again with the -i option
+specifying the tablet's vendor and product IDs, like this:
+
+digimend-diag -o diag.txt -i 5543:0005
+
+Or you could simply specify a device name pattern with the -n option, like
+this:
+
+digimend-diag -o diag.txt -n '*Genius*'
+
+You could get a full list of digimend-diag options with descriptions using
+the -h option.
