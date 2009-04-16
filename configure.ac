@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Nikolai Kondrashov
+# Copyright (c) 2009 Nikolai Kondrashov
 #
 # This file is part of digimend-diag.
 #
@@ -13,22 +13,27 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with wizardpen-calibrate; if not, write to the Free Software
+# along with digimend-diag; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#
+# Process this file with autoconf to produce a configure script.
 
-PREFIX=/usr/local
+AC_PREREQ(2.61)
+AC_INIT(digimend-diag, 0.1)
+AC_CONFIG_AUX_DIR([auxdir])
+AM_INIT_AUTOMAKE([1.10.1 -Wall foreign])
+AC_CONFIG_SRCDIR([digimend-diag])
 
-build:
-	make -Creport-dump build
-	make -Cevdev-dump build
+# Checks for programs.
+AC_PROG_INSTALL
 
-install: build
-	install -m755 report-dump/report-dump ${PREFIX}/bin/digimend-report-dump
-	install -m755 evdev-dump/evdev-dump ${PREFIX}/bin/digimend-evdev-dump
-	install -m755 digimend-diag ${PREFIX}/bin/digimend-diag
+# Checks for libraries.
 
-clean:
-	make -Cevdev-dump clean
-	make -Creport-dump clean
+# Checks for header files.
 
+# Checks for typedefs, structures, and compiler characteristics.
 
+# Checks for library functions.
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

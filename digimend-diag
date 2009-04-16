@@ -18,6 +18,8 @@
 # along with digimend-diag; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+HIDRD_DUMP=hidrd-dump
+EVDEV_DUMP=evdev-dump
 DEFAULT_DEVICE_NAME_PTRN="*Tablet*"
 
 # We need case insensitive matching
@@ -162,7 +164,7 @@ device from the kernel driver. To re-attach the device simply unplug and
 plug back the tablet.
 "
     echo "HID REPORT DESCRIPTOR DUMP"
-    digimend-report-dump ${usb_id%:*} ${usb_id#*:}
+    $HIDRD_DUMP ${usb_id%:*} ${usb_id#*:}
     echo
 }
 
@@ -210,7 +212,7 @@ END
     read -s
     echo "Capturing..." 1>&2
     echo "$title"
-    digimend-evdev-dump $device &
+    $EVDEV_DUMP $device &
     read -s
     kill $! 2>/dev/null
     # We need to capture the error code, so disable "dying" temporarily
