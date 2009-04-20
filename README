@@ -23,8 +23,8 @@ Traditional "./configure && make && make install" will do.
 
 USAGE
 
-Connect your tablet and run digimend-diag, specifying output file with the
--o option, like this:
+Connect your tablet and run digimend-diag as a superuser, specifying output
+file with the -o option, like this:
 
 digimend-diag -o diag.txt
 
@@ -41,3 +41,9 @@ digimend-diag -o diag.txt -n '*Genius*'
 
 You could get a full list of digimend-diag options with descriptions using
 the -h option.
+
+During the diagnostics collection you will be asked to perform various input
+actions. In order to eliminate any possibility of this input affecting your
+environment, please make sure your X server (if you're running one) doesn't
+react to your input, or switch to the console and make sure the gpm daemon
+is not running.
