@@ -18,12 +18,7 @@ usbutils
 
 INSTALLATION
 
-A simple "make install" will do.
-
-The default prefix is /usr/local, but you could specify your own prefix like
-this:
-
-make PREFIX=/usr install
+A simple "configure && make && make install" will do.
 
 
 USAGE
