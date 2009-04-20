@@ -18,4 +18,4 @@
 
 SUBDIRS = evdev-dump hidrd-dump
 
-sbin_SCRIPTS = digimend-diag
+dist_sbin_SCRIPTS = digimend-diag

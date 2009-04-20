@@ -18,7 +18,7 @@ usbutils
 
 INSTALLATION
 
-A simple "configure && make && make install" will do.
+Traditional "./configure && make && make install" will do.
 
 
 USAGE
