@@ -1,4 +1,4 @@
-# Copyright (c) 2009 Nikolai Kondrashov
+# Copyright (c) 2009-2010 Nikolai Kondrashov
 #
 # This file is part of digimend-diag.
 #
@@ -21,7 +21,7 @@
 AC_PREREQ(2.61)
 AC_INIT(digimend-diag, 0.1)
 AC_CONFIG_AUX_DIR([auxdir])
-AM_INIT_AUTOMAKE([1.10.1 -Wall foreign])
+AM_INIT_AUTOMAKE([1.9 -Wall foreign])
 AC_CONFIG_SRCDIR([digimend-diag])
 
 # Checks for programs.
@@ -36,5 +36,4 @@ AC_PROG_INSTALL
 # Checks for library functions.
 
 AC_CONFIG_FILES([Makefile])
-AC_CONFIG_SUBDIRS([evdev-dump hidrd-dump])
 AC_OUTPUT
