@@ -17,4 +17,8 @@
 # along with digimend-diag; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+SUBDIRS = hid-dump
+
 dist_sbin_SCRIPTS = digimend-diag
+
+ACLOCAL_AMFLAGS = -I m4

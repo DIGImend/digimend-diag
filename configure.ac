@@ -20,10 +20,11 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(digimend-diag, 0.1)
+AC_INIT(digimend-diag, 1.0)
 AC_CONFIG_AUX_DIR([auxdir])
 AM_INIT_AUTOMAKE([1.9 -Wall foreign])
 AC_CONFIG_SRCDIR([digimend-diag])
+AC_CONFIG_MACRO_DIR([m4])
 
 # Checks for programs.
 AC_PROG_INSTALL
@@ -37,4 +38,5 @@ AC_PROG_INSTALL
 # Checks for library functions.
 
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_SUBDIRS([hid-dump])
 AC_OUTPUT

@@ -21,6 +21,10 @@
 # Fail on any error
 set -e
 
-aclocal
+pushd hid-dump >/dev/null
+./bootstrap
+popd >/dev/null
+
+aclocal -I m4
 automake --add-missing
 autoconf
