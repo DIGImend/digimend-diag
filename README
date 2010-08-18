@@ -12,10 +12,8 @@ In order to build and run this program you will need the following packages
 installed along with their dependencies:
 
 gawk
-libhid-dev
+libusb-1.0-0-dev
 usbutils
-evdev-dump
-hidrd-dump
 
 
 INSTALLATION
